@@ -1,3 +1,5 @@
+引子：[《回顾&总结：ijkPlayer 直播特性分支》](http://www.ruoxu.me//ijkplayer-liveyy)
+
 
 ### 主要目的：
 移动视频直播的需求，一般比较重视的特性和目的，
