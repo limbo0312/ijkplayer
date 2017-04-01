@@ -2669,7 +2669,22 @@ static int read_thread(void *arg)
     }
     if (ffp->iformat_name)
         is->iformat = av_find_input_format(ffp->iformat_name);
+    //1、上一个 if 为根据格式 name 来find 所属的 format。如果确定自己服务器的 format，可以跳过这个 find 省掉这个操作的耗时。
+    //2、比如下面这样。
+    //    else if (av_stristart(is->filename, "rtmp", NULL)) {
+//        is->iformat = av_find_input_format("flv");
+//        //        ic->probesize = 1024;
+//        ic->probesize = 4096;
+//        ic->max_analyze_duration = 2000000;
+//        ic->flags |= AVFMT_FLAG_NOBUFFER;
+//        av_dict_set(&ffp->format_opts, "pixel_format", "rgb24", 0);
+//    }
+
+//我们再看看一些耗时的 api，比如avformat_open_input
+    log_timestamp("egs note:avformat_open_input begin");// 
     err = avformat_open_input(&ic, is->filename, is->iformat, &ffp->format_opts);
+    log_timestamp("egs note:avformat_open_input end");
+
     if (err < 0) {
         print_error(is->filename, err);
         ret = -1;
@@ -3358,7 +3373,7 @@ void ffp_global_init()
 #if CONFIG_AVFILTER
     avfilter_register_all();
 #endif
-    av_register_all();
+    av_register_all();//keyStep: 初始化注册各种模块组件。
 
     ijkav_register_all();
 
@@ -4449,3 +4464,12 @@ IjkMediaMeta *ffp_get_meta_l(FFPlayer *ffp)
 
     return ffp->meta;
 }
+
+#include <sys/time.h>
+//helper: 增加时间打印。判断哪些操作耗时。
+void log_timestamp(const char *msg) {
+    struct timeval now;
+    gettimeofday(&now,NULL);
+    printf("%ld.%d %s\n", now.tv_sec, now.tv_usec, msg);
+}
+

@@ -73,6 +73,9 @@ static const char *kIJKFFRequiredFFmpegVersion = "ff3.2--ijk0.7.6--20170203--001
     IjkIOAppCacheStatistic _cacheStat;
     BOOL _shouldShowHudView;
     NSTimer *_hudTimer;
+
+    NSTimeInterval ret_member_postion;
+
 }
 
 @synthesize view = _view;
@@ -548,11 +551,23 @@ inline static int getPlayerOption(IJKFFOptionCategory category)
     if (!_mediaPlayer)
         return 0.0f;
 
-    NSTimeInterval ret = ijkmp_get_current_position(_mediaPlayer);
-    if (isnan(ret) || isinf(ret))
+    // NSTimeInterval ret = ijkmp_get_current_position(_mediaPlayer);
+    // if (isnan(ret) || isinf(ret))
+    //     return -1;
+
+    //egs note: fix a bug 避免数据等待是，反复在主线程mutex操作，造成界面卡死
+    
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        ret_member_postion = ijkmp_get_current_position(_mediaPlayer);
+    });
+    NSLog(@"egs note: player obj %@,ijk get position %f,play url %@",self,ret_member_postion/1000,_urlString);
+    if (isnan(ret_member_postion) || isinf(ret_member_postion))
         return -1;
 
-    return ret / 1000;
+    return ret_member_postion / 1000;
+
+
+    // return ret / 1000;
 }
 
 - (NSTimeInterval)duration
@@ -1109,6 +1124,9 @@ inline static void fillMetaInternal(NSMutableDictionary *meta, IjkMediaMeta *raw
             break;
         }
         case FFP_MSG_VIDEO_RENDERING_START: {
+            //egs add:
+            NSLog(@"egs note:渲染第一帧耗时 %lld",_monitor.firstVideoFrameLatency);
+
             NSLog(@"FFP_MSG_VIDEO_RENDERING_START:\n");
             _monitor.firstVideoFrameLatency = (int64_t)SDL_GetTickHR() - _monitor.prepareStartTick;
             [[NSNotificationCenter defaultCenter]
@@ -1517,6 +1535,17 @@ static int ijkff_inject_callback(void *opaque, int message, void *data, size_t d
                              selector:@selector(applicationWillTerminate)
                                  name:UIApplicationWillTerminateNotification
                                object:nil];
+}
+
+#pragma mark egs 
+-(void)reloadPlayerEGS{
+    if (_isReload==YES) {
+        NSLog(@"warninng::please not reload much time at once!!");
+        return;
+    }
+    [self shutdown];
+
+    self.isReload = YES;
 }
 
 - (void)unregisterApplicationObservers

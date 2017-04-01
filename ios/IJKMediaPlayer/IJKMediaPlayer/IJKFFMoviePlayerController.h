@@ -125,6 +125,16 @@ typedef enum IJKLogLevel {
 
 - (void)didShutdown;
 
+//egs add helper method
+//1、一些个性的功能使用。
+@property(assign,nonatomic)BOOL isReload;
+-(void)reloadPlayerEGS;
+//egs alter publice method
+//1、一些需要手动操作的方法可以简单 publice。在保证线程安全的前提下。
+- (void)setMaxBufferSize:(int)maxBufferSize;//1024*1024=1M
+- (NSTimeInterval)currentPlaybackTime;
+
+
 #pragma mark KVO properties
 @property (nonatomic, readonly) IJKFFMonitor *monitor;
 
